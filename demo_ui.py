@@ -94,7 +94,7 @@ def initialize_session():
                 continue
 
         # Get bot configuration
-        bot_name = os.environ.get('BOT_NAME', "Agent Assistant")
+        bot_name = os.environ.get('BOT_NAME', "Agent Assistant")  # Change this default name to your testing agent name
         # 使用生成器表达式，从列表中查找第一个 bot_name 匹配的配置项。next(..., None) 表示：如果找到了就返回该配置；如果没有找到就返回 None。
         bot_config = next((config for config in bot_configs if config['bot_name'] == bot_name), None)
         

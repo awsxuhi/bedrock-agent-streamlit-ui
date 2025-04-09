@@ -36,7 +36,7 @@ The application now supports agents deployed in different AWS regions. To use an
 
 ## Tested Demo Examples
 
-The following demos have been tested with this UI and can be found in their respective folders:
+The following demos have been tested with this UI and can be found in their respective folders of project (https://github.com/awslabs/amazon-bedrock-agent-samples):
 
 - **Sports Team Poet** (`/examples/multi_agent_collaboration/team_poems_agent/`): Creates poems about sports teams
 - **Portfolio Assistant** (`/examples/multi_agent_collaboration/portfolio_assistant_agent/`): Analyzes stock tickers
@@ -102,47 +102,47 @@ The following demos have been tested with this UI and can be found in their resp
 ## Using UV
 
 ```shell
-# 1. 创建 uv 虚拟环境（默认自动使用 .venv）
+# 1. Create a UV virtual environment (defaults to .venv)
 uv venv
 
-# 2. 激活虚拟环境（这一步与原来一致）
+# 2. Activate the virtual environment
 source .venv/bin/activate
 
-# 3. 安装依赖（可直接使用 requirements.txt）
+# 3. Install dependencies
 uv pip install -r src/requirements.txt
 
-# 4. 启动 Streamlit
+# 4. Start Streamlit
 BOT_NAME="<bot-name>" streamlit run demo_ui.py
 ```
 
 ## Bot Configuration Details
 
-这行代码 bot_config = next((config for config in bot_configs if config['bot_name'] == bot_name), None) 执行后，bot_config 将包含与 bot_name 变量值匹配的第一个配置项。
+After executing this code: `bot_config = next((config for config in bot_configs if config['bot_name'] == bot_name), None)`, the `bot_config` will contain the first configuration item that matches the `bot_name` variable value.
 
-根据代码中的 bot_name = os.environ.get('BOT_NAME', 'PortfolioCreator Agent')，如果环境变量 BOT_NAME 未设置，则默认使用 'PortfolioCreator Agent'。
+According to the code where `bot_name = os.environ.get('BOT_NAME', 'Agent Assistant')`, if the BOT_NAME environment variable is not set, it will default to 'Agent Assistant'.
 
-举例说明：
+Example:
 
-假设环境变量 BOT_NAME 未设置，则 bot_name 为 'PortfolioCreator Agent'。根据 config.py 中的定义，bot_config 将是：
+If the BOT_NAME environment variable is not set, then `bot_name` will be 'Agent Assistant'. According to the definition in `config.py`, `bot_config` will be:
 
 ```json
 {
-    "bot_name": "PortfolioCreator Agent",
-    "agent_name": "portfolio_creator",
-    "region": "us-west-2",          # 注意这个 agent 位于 us-west-2 区域
-    "start_prompt": "I can help create portfolios. What would you like to know?",
-    "agent_id": "VEM8PN7UL6",       # 这是通过 get_agent_id_by_name 获取或从配置中读取的
-    "agent_alias_id": "6TRSXGBJKM"  # 这是通过 get_agent_latest_alias_id 获取或从配置中读取的
+    "bot_name": "Agent Assistant",
+    "agent_name": "booking-agent",
+    "region": "us-east-1",          # Default region
+    "start_prompt": "Hi, I am Henry. How can I help you?",
+    "agent_id": "VEM8PN7UL6",       # This is obtained via get_agent_id_by_name or read from configuration
+    "agent_alias_id": "6TRSXGBJKM"  # This is obtained via get_agent_latest_alias_id or read from configuration
 }
 ```
 
-如果环境变量 BOT_NAME 设置为 "Mortgages Assistant"，则 bot_config 将是：
+If the BOT_NAME environment variable is set to "Mortgages Assistant", then `bot_config` will be:
 
 ```json
 {
     "bot_name": "Mortgages Assistant",
     "agent_name": "mortgages_assistant",
-    "region": "us-east-1",          # 默认区域
+    "region": "us-east-1",          # Default region
     "start_prompt": "I'm your mortgages assistant. How can I help today?",
     "session_attributes": {
         "sessionAttributes": {
@@ -160,27 +160,73 @@ BOT_NAME="<bot-name>" streamlit run demo_ui.py
 }
 ```
 
-如果环境变量 BOT_NAME 设置为一个不存在于 bot_configs 中的名称，例如 "Nonexistent Bot"，则 bot_config 将是 None。
+If the BOT_NAME environment variable is set to a name that doesn't exist in `bot_configs`, such as "Nonexistent Bot", then `bot_config` will be None.
 
 ## Error Handling Improvements
 
-本应用程序包含以下错误处理改进，使其更加健壮：
+This application includes the following error handling improvements to make it more robust:
 
-1. **多区域支持**：应用程序现在可以处理位于不同 AWS 区域的 agent，通过在配置中指定 `region` 字段。
+1. **Multi-region support**: The application can now handle agents located in different AWS regions by specifying the `region` field in the configuration.
 
-2. **安全的令牌处理**：改进了对 `inputTokens` 和 `outputTokens` 的处理，即使这些值不存在或为零，应用程序也能正常工作。
+2. **Safe token handling**: Improved handling of `inputTokens` and `outputTokens`, ensuring the application works correctly even if these values don't exist or are zero.
 
-3. **函数名称处理**：添加了对 action group 调用中缺失 `function` 键的处理，使用默认值 "未知函数" 并继续执行。
+3. **Function name handling**: Added handling for missing `function` keys in action group calls, using the default value "Unknown function" and continuing execution.
 
-4. **异常捕获**：添加了更多的 try-except 块，以捕获并记录可能的异常，而不是让应用程序崩溃。
+4. **Exception catching**: Added more try-except blocks to catch and log possible exceptions rather than letting the application crash.
 
-5. **路径优化**：简化了导入路径，移除了不必要的 `sys.path` 修改。
+5. **Path optimization**: Simplified import paths, removing unnecessary `sys.path` modifications.
 
-这些改进使应用程序能够更好地处理不同区域的 agent，以及不同 agent 响应结构的差异，提高了整体稳定性。
+These improvements allow the application to better handle agents in different regions and differences in agent response structures, improving overall stability.
+
+## Quick Start Guide
+
+Follow these steps to quickly set up and run the Bedrock Agent Streamlit UI:
+
+1. **Create a virtual environment using UV**:
+
+   ```bash
+   uv venv
+   source .venv/bin/activate
+   ```
+
+2. **Install dependencies**:
+
+   ```bash
+   uv pip install -r src/requirements.txt
+   ```
+
+3. **Configure your agent**:
+
+   - Open `config.py` and add your agent configuration to the `bot_configs` list
+   - Example configuration:
+
+   ```python
+   {
+       "bot_name": "Your Agent Name",
+       "agent_name": "your_agent_id",
+       "region": "us-east-1",
+       "start_prompt": "How can I help you today?"
+   }
+   ```
+
+4. **Set default agent (Optional)**:
+
+   - Open `demo_ui.py` and locate line 97:
+
+   ```python
+   bot_name = os.environ.get('BOT_NAME', "Agent Assistant")
+   ```
+
+   - Change `"Agent Assistant"` to your preferred default agent name
+
+5. **Run the Streamlit application**:
+   ```bash
+   streamlit run demo_ui.py
+   ```
 
 ## Usage
 
-1. The UI will display the selected bot's interface (defaults to PortfolioCreator Agent if not specified)
+1. The UI will display the selected bot's interface (defaults to the agent specified in line 97 of demo_ui.py)
 2. Enter your query in the chat input field
 3. The agent will:
    - Process your request
