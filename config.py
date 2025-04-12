@@ -3,8 +3,14 @@ import datetime
 # Bot configurations
 bot_configs = [
     {
-        "bot_name": "Portfolio Creator",
-        "agent_name": "supervisor-0efbaab7e7f9",
+        "bot_name": "pc collaborator",
+        "agent_name": "portfolio-creator-122677aad09d",
+        "region": "us-east-1",
+        "start_prompt": "Hi, I am Henry. How can I help you?"
+    },
+    {
+        "bot_name": "pc supervisor",
+        "agent_name": "supervisor-122677aad09d",
         "region": "us-east-1",
         "start_prompt": "Hi, I am Henry. How can I help you?"
     },

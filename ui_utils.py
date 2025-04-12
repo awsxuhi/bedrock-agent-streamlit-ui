@@ -250,11 +250,13 @@ def get_error_text(key):
     texts = {
         "中文": {
             "missing_config": "缺少必要的Agent配置信息。请在侧边栏配置Agent ID和Agent Alias ID。",
-            "config_error": "配置错误：缺少必要的Agent配置信息。"
+            "config_error": "配置错误：缺少必要的Agent配置信息。",
+            "agent_mismatch": "无法获取必要的Agent配置信息。请确保提供了正确的Agent名称、ID或Alias ID。"
         },
         "English": {
             "missing_config": "Missing required Agent configuration. Please configure Agent ID and Agent Alias ID in the sidebar.",
-            "config_error": "Configuration Error: Missing required Agent information."
+            "config_error": "Configuration Error: Missing required Agent information.",
+            "agent_mismatch": "Unable to get required Agent configuration. Please ensure you provided the correct Agent name, ID or Alias ID."
         }
     }
     

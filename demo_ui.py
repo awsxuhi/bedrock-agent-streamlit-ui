@@ -14,7 +14,7 @@ import importlib
 
 from src.utils.bedrock_agent import agents_helper
 import config
-from ui_utils import invoke_agent
+from ui_utils import invoke_agent, get_error_text
 
 def get_agent_id_by_name(agent_name, region=None):
     """根据agent名称获取agent ID"""
@@ -471,47 +471,10 @@ def on_custom_config_change():
     """自定义配置切换回调函数"""
     st.session_state['use_custom_config'] = st.session_state['use_custom_config_checkbox']
 
-def on_agent_alias_id_change():
-    """Agent Alias ID输入变化回调函数"""
-    alias_id = st.session_state['custom_agent_alias_id_input']
-    st.session_state['custom_agent_alias_id'] = alias_id
-
 def on_agent_id_change():
     """Agent ID输入变化回调函数"""
     agent_id = st.session_state['custom_agent_id_input']
     st.session_state['custom_agent_id'] = agent_id
-
-def verify_agent_match(agent_id, agent_alias_id, region=None):
-    """验证agent_id和agent_alias_id是否匹配"""
-    try:
-        if not agent_id or not agent_alias_id:
-            return False, "Agent ID和Agent Alias ID都必须提供"
-            
-        if region:
-            bedrock_agent = boto3.client("bedrock-agent", region_name=region)
-        else:
-            bedrock_agent = boto3.client("bedrock-agent")
-        
-        # 获取alias对应的agent ID
-        response = bedrock_agent.list_agent_aliases(maxResults=100)
-        alias_agent_id = None
-        
-        for alias in response.get("agentAliasSummaries", []):
-            if alias["agentAliasId"] == agent_alias_id:
-                alias_agent_id = alias["agentId"]
-                break
-        
-        if not alias_agent_id:
-            return False, f"找不到Alias ID: {agent_alias_id}"
-        
-        # 验证agent ID是否匹配
-        if alias_agent_id != agent_id:
-            return False, f"Agent ID与Alias ID不匹配。Alias ID: {agent_alias_id} 属于Agent ID: {alias_agent_id}"
-        
-        return True, "验证成功"
-    except Exception as e:
-        print(f"Error verifying agent match: {e}")
-        return False, f"验证过程中出错: {str(e)}"
 
 def on_new_bot_name_change():
     """新Bot名称输入变化回调函数"""
@@ -520,10 +483,6 @@ def on_new_bot_name_change():
 def on_new_agent_name_change():
     """新Agent名称输入变化回调函数"""
     st.session_state['new_agent_name'] = st.session_state['new_agent_name_input']
-
-def on_new_agent_alias_id_change():
-    """新Agent Alias ID输入变化回调函数"""
-    st.session_state['new_agent_alias_id'] = st.session_state['new_agent_alias_id_input']
 
 def on_new_start_prompt_change():
     """新初始提示语输入变化回调函数"""
@@ -616,7 +575,7 @@ def main():
                     
                     st.success(get_ui_text("config_updated"))
                 else:
-                    st.error("无法获取必要的Agent配置信息。请确保提供了正确的Agent名称、ID或Alias ID。")
+                    st.error(get_error_text("agent_mismatch"))
         
         # 添加分隔线
         st.write("---")
@@ -637,14 +596,6 @@ def main():
                 value=st.session_state['new_agent_name'],
                 key="new_agent_name_input",
                 on_change=on_new_agent_name_change
-            )
-            
-            # Agent Alias ID（可选）
-            st.text_input(
-                get_ui_text("agent_alias_id"),
-                value=st.session_state['new_agent_alias_id'],
-                key="new_agent_alias_id_input",
-                on_change=on_new_agent_alias_id_change
             )
             
             # 初始提示语（可选）
@@ -679,10 +630,6 @@ def main():
                         'region': st.session_state['new_region']
                     }
                     
-                    # 添加可选字段
-                    if st.session_state['new_agent_alias_id']:
-                        new_config['agent_alias_id'] = st.session_state['new_agent_alias_id']
-                    
                     if st.session_state['new_start_prompt']:
                         new_config['start_prompt'] = st.session_state['new_start_prompt']
                     
@@ -695,7 +642,6 @@ def main():
                         # 清空表单
                         st.session_state['new_bot_name'] = ""
                         st.session_state['new_agent_name'] = ""
-                        st.session_state['new_agent_alias_id'] = ""
                         st.session_state['new_start_prompt'] = "Hi, I am Henry. How can I help you?"
                         st.session_state['new_region'] = "us-east-1"
                         # 重新加载页面以更新bot列表
@@ -708,8 +654,7 @@ def main():
             bot_to_delete = st.selectbox(
                 label=get_ui_text("delete_bot"),
                 options=bot_names,
-                key="bot_to_delete",
-                label_visibility="collapsed"
+                key="bot_to_delete"
             )
             
             # 删除按钮
@@ -730,7 +675,7 @@ def main():
         col1, col2 = st.columns([1, 3])
         with col1:
             st.toggle(
-                label="",
+                label="Language Toggle",
                 value=st.session_state['language'] == "中文",
                 key="language_toggle",
                 on_change=on_language_change,
