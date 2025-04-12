@@ -1,18 +1,157 @@
-# Streamlit Demo UI
+# Bedrock Agent Streamlit UI
 
-A Streamlit-based user interface that can be used with any text-based Bedrock agent by updating the `config.py` file. Supports agents across multiple AWS regions.
+A comprehensive Streamlit-based user interface for interacting with Amazon Bedrock Agents. This application provides a flexible, user-friendly interface that can be used with any text-based Bedrock agent across multiple AWS regions.
 
-## Using with Any Bedrock Agent
+![Demo UI Screenshot](demo_ui.png)
 
-To add your own agent:
+## Features
+
+- **Intuitive Chat Interface**: Clean, user-friendly interface for interacting with Bedrock Agents
+- **Multi-Agent Support**: Configure and use multiple agents through a simple configuration file
+- **Multi-Region Support**: Work with agents deployed across different AWS regions
+- **Custom Agent Configuration**: Connect to any Bedrock Agent by providing the necessary identifiers
+- **Bilingual Interface**: Support for both English and Chinese languages
+- **Agent Execution Visualization**: See the agent's reasoning process, tool usage, and knowledge base lookups
+- **Token Usage Tracking**: Monitor token consumption for each conversation
+- **Error Handling**: Robust error handling with user-friendly error messages
+- **Session Management**: Create new chat sessions with a single click to start fresh conversations
+- **In-App Agent Management**: Add and delete agents directly from the UI without editing configuration files
+- **Prioritized New Agents**: Newly added agents appear at the top of the selection list for easy access
+- **Enhanced Configuration Validation**: Automatic validation and retrieval of agent IDs and alias IDs
+
+## Project Structure
+
+- `demo_ui.py`: Main application file containing the Streamlit UI and application logic
+- `ui_utils.py`: Utility functions for UI components and agent invocation
+- `config.py`: Configuration file for preset agent definitions
+- `src/utils/`: Helper functions for interacting with Bedrock Agents
+- `docs/`: Documentation including architecture and design details
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.x
+- AWS account with access to Amazon Bedrock and Bedrock Agents
+- AWS credentials configured with appropriate permissions
+- Bedrock Agents created and deployed in your AWS account
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   cd bedrock-agent-streamlit-ui
+   ```
+
+2. Create and activate a Python virtual environment:
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. Install required dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Using UV (Alternative Installation)
+
+```bash
+# 1. Create a UV virtual environment (defaults to .venv)
+uv venv
+
+# 2. Activate the virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
+uv pip install -r requirements.txt
+```
+
+## Running the Application
+
+1. Configure your AWS credentials:
+
+   ```bash
+   export AWS_PROFILE=your-profile  # Or configure using AWS CLI
+   ```
+
+2. Run the Streamlit application:
+
+   ```bash
+   streamlit run demo_ui.py
+   ```
+
+3. Optionally, specify a specific bot using the BOT_NAME environment variable:
+
+   ```bash
+   BOT_NAME="Your Bot Name" streamlit run demo_ui.py
+   ```
+
+## Using the Application
+
+### Selecting an Agent
+
+1. Use the sidebar to select from preset agents or configure a custom agent
+2. For preset agents, select from the dropdown and click "Apply"
+3. For custom agents, toggle "Use Custom Configuration" and provide:
+   - AWS Region
+   - Agent Alias ID, Agent Name, or Agent ID
+   - Click "Apply" to connect to the agent
+
+### Interacting with Agents
+
+1. Type your query in the chat input field at the bottom of the screen
+2. The agent will process your request and display its response
+3. You can view the agent's reasoning process by expanding the trace sections
+4. Continue the conversation by entering additional queries
+
+### Managing Chat Sessions
+
+1. To start a new conversation while keeping the same agent, click the "New Session" button in the top-right corner of the chat area
+2. This will clear the chat history and create a new session ID, allowing you to start a fresh conversation
+3. The agent configuration remains the same, so you don't need to reconfigure the agent
+
+### Adding and Removing Agents
+
+#### Adding a New Agent
+
+1. In the sidebar, expand the "Add New Bot" section
+2. Fill in the required fields:
+   - Bot Name: A display name for the agent in the UI
+   - Agent Name: The name of your Bedrock agent
+3. Optionally, you can also provide:
+   - Agent Alias ID: If you know the specific alias ID you want to use
+   - Start Prompt: An initial message to show users
+   - Region: The AWS region where your agent is deployed
+4. Click "Add" to add the agent to the list
+5. The new agent will appear at the top of the selection list
+6. Select the newly added agent and click "Apply" to use it
+
+#### Removing an Agent
+
+1. In the sidebar, expand the "Delete Bot" section
+2. Select the agent you want to delete from the dropdown
+3. Click "Delete" to remove the agent from the list
+
+### Switching Languages
+
+Use the language toggle at the bottom of the sidebar to switch between English and Chinese interfaces.
+
+## Configuring Your Own Agents
+
+You can add agents directly through the UI as described above, or by editing the configuration file:
 
 1. Add a new configuration to the `bot_configs` list in `config.py`:
 
 ```python
 {
     "bot_name": "Your Bot Name",    # Display name in the UI
-    "agent_name": "your_agent_id",  # Your Bedrock agent ID
-    "region": "us-east-1",          # AWS region where your agent is deployed (optional, defaults to us-east-1)
+    "agent_name": "your_agent_name",  # Your Bedrock agent name
+    "region": "us-east-1",          # AWS region where your agent is deployed
     "start_prompt": "Initial message to show users",
     "session_attributes": {         # Optional: Include if your agent needs specific session attributes
         "sessionAttributes": {      # Custom key-value pairs for your agent's session
@@ -24,225 +163,69 @@ To add your own agent:
 }
 ```
 
-### Multi-Region Support
+2. Restart the application to load the new configuration
 
-The application now supports agents deployed in different AWS regions. To use an agent from a specific region:
+Note: Agents added through the UI will be saved to the `config.py` file automatically.
 
-1. Add the `region` field to your agent's configuration in `config.py`
-2. The application will automatically use the specified region when:
-   - Looking up agent IDs and aliases
-   - Invoking the agent
-   - Processing agent responses
+### Setting a Default Agent
+
+To change the default agent:
+
+1. Open `demo_ui.py` and locate the following line (around line 97):
+
+```python
+bot_name = os.environ.get('BOT_NAME', "Multi-agent PortfolioCreator")
+```
+
+2. Change `"Multi-agent PortfolioCreator"` to your preferred default agent name
+3. Save the file and restart the application
+
+## Configuration Priority
+
+When configuring a custom agent, the application uses the following priority order to resolve agent information:
+
+1. Agent Alias ID (highest priority)
+2. Agent ID
+3. Agent Name (lowest priority)
+
+For example, if you provide an Agent Alias ID, the application will use it to look up the corresponding Agent ID and Agent Name. If you provide only an Agent Name, the application will look up the corresponding Agent ID and then the latest Agent Alias ID.
+
+## Architecture and Design
+
+For detailed information about the application's architecture and design, see:
+
+- [Architecture Documentation](docs/architecture.md)
+- [Design Documentation](docs/design.md)
+
+## Error Handling and Configuration Validation
+
+The application includes several error handling and configuration validation improvements:
+
+1. **Multi-region support**: Handles agents located in different AWS regions
+2. **Safe token handling**: Works correctly even if token values don't exist or are zero
+3. **Function name handling**: Handles missing function keys in action group calls
+4. **Exception catching**: Catches and logs exceptions with user-friendly error messages
+5. **Path optimization**: Uses simplified import paths
+6. **Automatic ID resolution**: Automatically resolves agent IDs and alias IDs based on available information
+7. **Configuration validation**: Validates agent configurations before applying them to ensure they contain all required information
+8. **Graceful error recovery**: Provides clear error messages and recovery options when configuration issues are detected
+9. **Session management**: Properly handles session state to prevent data loss and ensure consistent behavior
 
 ## Tested Demo Examples
 
-The following demos have been tested with this UI and can be found in their respective folders of project (https://github.com/awslabs/amazon-bedrock-agent-samples):
+The following demos have been tested with this UI:
 
-- **Sports Team Poet** (`/examples/multi_agent_collaboration/team_poems_agent/`): Creates poems about sports teams
-- **Portfolio Assistant** (`/examples/multi_agent_collaboration/portfolio_assistant_agent/`): Analyzes stock tickers
-- **Trip Planner** (`/examples/multi_agent_collaboration/trip_planner_agent/`): Generates travel itineraries
-- **Voyage Virtuoso** (`/examples/multi_agent_collaboration/voyage_virtuoso_agent/`): Provides exotic travel recommendations
-- **Mortgages Assistant** (`/examples/multi_agent_collaboration/mortgage_assistant/`): Handles mortgage-related queries
-- **Custom Orchestration** (`/examples/agents/custom_orchestration_agent/`): Demonstrates ReWoo (Reasoning without Observation) orchestration for a restaurant assistant agent
+- **Sports Team Poet**: Creates poems about sports teams
+- **Portfolio Assistant**: Analyzes stock tickers
+- **Trip Planner**: Generates travel itineraries
+- **Voyage Virtuoso**: Provides exotic travel recommendations
+- **Mortgages Assistant**: Handles mortgage-related queries
+- **Custom Orchestration**: Demonstrates ReWoo orchestration for a restaurant assistant agent
 
-## Prerequisites
+## Contributing
 
-1. Follow the setup instructions in each agent's respective folder before using them in the demo UI:
+Contributions to improve the Bedrock Agent Streamlit UI are welcome. Please feel free to submit issues or pull requests.
 
-   - `/examples/multi_agent_collaboration/mortgage_assistant/README.md`
-   - `/examples/multi_agent_collaboration/voyage_virtuoso_agent/README.md`
-   - `/examples/multi_agent_collaboration/trip_planner_agent/README.md`
-   - `/examples/multi_agent_collaboration/team_poems_agent/README.md`
-   - `/examples/agents/custom_orchestration_agent/README.md`
-   - `/examples/multi_agent_collaboration/portfolio_assistant_agent/README.md`
+## License
 
-2. Ensure you have:
-
-   - Python 3.x
-   - AWS credentials configured with appropriate permissions
-
-3. Create and activate a Python virtual environment:
-
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-4. Install required dependencies:
-   ```bash
-   pip install -r src/requirements.txt
-   ```
-
-## Running the Demo
-
-3. Configure your AWS credentials with appropriate permissions
-
-4. Run the Streamlit application:
-
-   ```bash
-   cd examples/agents_ux/streamlit_demo/; streamlit run demo_ui.py
-   ```
-
-5. Optionally, specify a specific bot using the BOT_NAME environment variable:
-
-   ```bash
-   BOT_NAME="<bot-name>" streamlit run demo_ui.py
-   ```
-
-   Supported BOT_NAME values:
-
-   - "PortfolioCreator Agent" (default)
-   - "Portfolio Assistant"
-   - "Sports Team Poet"
-   - "Trip Planner"
-   - "Voyage Virtuoso"
-   - "Mortgages Assistant"
-   - "Custom Orchestration"
-
-## Using UV
-
-```shell
-# 1. Create a UV virtual environment (defaults to .venv)
-uv venv
-
-# 2. Activate the virtual environment
-source .venv/bin/activate
-
-# 3. Install dependencies
-uv pip install -r src/requirements.txt
-
-# 4. Start Streamlit
-BOT_NAME="<bot-name>" streamlit run demo_ui.py
-```
-
-## Bot Configuration Details
-
-After executing this code: `bot_config = next((config for config in bot_configs if config['bot_name'] == bot_name), None)`, the `bot_config` will contain the first configuration item that matches the `bot_name` variable value.
-
-According to the code where `bot_name = os.environ.get('BOT_NAME', 'Agent Assistant')`, if the BOT_NAME environment variable is not set, it will default to 'Agent Assistant'.
-
-Example:
-
-If the BOT_NAME environment variable is not set, then `bot_name` will be 'Agent Assistant'. According to the definition in `config.py`, `bot_config` will be:
-
-```json
-{
-    "bot_name": "Agent Assistant",
-    "agent_name": "booking-agent",
-    "region": "us-east-1",          # Default region
-    "start_prompt": "Hi, I am Henry. How can I help you?",
-    "agent_id": "VEM8PN7UL6",       # This is obtained via get_agent_id_by_name or read from configuration
-    "agent_alias_id": "6TRSXGBJKM"  # This is obtained via get_agent_latest_alias_id or read from configuration
-}
-```
-
-If the BOT_NAME environment variable is set to "Mortgages Assistant", then `bot_config` will be:
-
-```json
-{
-    "bot_name": "Mortgages Assistant",
-    "agent_name": "mortgages_assistant",
-    "region": "us-east-1",          # Default region
-    "start_prompt": "I'm your mortgages assistant. How can I help today?",
-    "session_attributes": {
-        "sessionAttributes": {
-            "customer_id": "123456",
-            "todays_date": "2025-04-09"
-        },
-        "promptSessionAttributes": {
-            "customer_id": "123456",
-            "customer_preferred_name": "Mark",
-            "todays_date": "2025-04-09"
-        }
-    },
-    "agent_id": "T4OHRV29ZV",
-    "agent_alias_id": "GPF1XLJB8F"
-}
-```
-
-If the BOT_NAME environment variable is set to a name that doesn't exist in `bot_configs`, such as "Nonexistent Bot", then `bot_config` will be None.
-
-## Error Handling Improvements
-
-This application includes the following error handling improvements to make it more robust:
-
-1. **Multi-region support**: The application can now handle agents located in different AWS regions by specifying the `region` field in the configuration.
-
-2. **Safe token handling**: Improved handling of `inputTokens` and `outputTokens`, ensuring the application works correctly even if these values don't exist or are zero.
-
-3. **Function name handling**: Added handling for missing `function` keys in action group calls, using the default value "Unknown function" and continuing execution.
-
-4. **Exception catching**: Added more try-except blocks to catch and log possible exceptions rather than letting the application crash.
-
-5. **Path optimization**: Simplified import paths, removing unnecessary `sys.path` modifications.
-
-These improvements allow the application to better handle agents in different regions and differences in agent response structures, improving overall stability.
-
-## Quick Start Guide
-
-Follow these steps to quickly set up and run the Bedrock Agent Streamlit UI:
-
-1. **Create a virtual environment using UV**:
-
-   ```bash
-   uv venv
-   source .venv/bin/activate
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
-   uv pip install -r src/requirements.txt
-   ```
-
-3. **Configure your agent**:
-
-   - Open `config.py` and add your agent configuration to the `bot_configs` list
-   - Example configuration:
-
-   ```python
-   {
-       "bot_name": "Your Agent Name",
-       "agent_name": "your_agent_id",
-       "region": "us-east-1",
-       "start_prompt": "How can I help you today?"
-   }
-   ```
-
-4. **Set default agent (Optional)**:
-
-   - Open `demo_ui.py` and locate line 97:
-
-   ```python
-   bot_name = os.environ.get('BOT_NAME', "Agent Assistant")
-   ```
-
-   - Change `"Agent Assistant"` to your preferred default agent name
-
-5. **Run the Streamlit application**:
-   ```bash
-   streamlit run demo_ui.py
-   ```
-
-## Usage
-
-1. The UI will display the selected bot's interface (defaults to the agent specified in line 97 of demo_ui.py)
-2. Enter your query in the chat input field
-3. The agent will:
-   - Process your request
-   - Show the collaboration between different agents
-   - Display thought processes and tool usage
-   - Provide a detailed response
-
-## Architecture
-
-The demo UI integrates with Amazon Bedrock Agent Runtime for agent execution and showcases multi_agent_collaboration features including:
-
-- Dynamic routing between specialized agents
-- Knowledge base lookups
-- Tool invocations
-- Code interpretation capabilities
-
-Below is an example of the demo UI in action, showing the Mortgages Assistant interface:
-
-![Demo UI Screenshot](demo_ui.png)
+This project is licensed under the terms specified in the LICENSE file.

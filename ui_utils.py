@@ -30,6 +30,76 @@ be sure to include the comprehensive text details as input to the task.\n\n"""
 
     return prompt
 
+def get_trace_text(key):
+    """根据当前语言获取跟踪文本"""
+    texts = {
+        "中文": {
+            "choosing_collaborator": "正在为此请求选择协作者...",
+            "no_matching": "没有匹配的协作者。对此请求恢复为'SUPERVISOR'模式。",
+            "continue_conversation": "继续与之前的协作者对话",
+            "use_collaborator": "使用协作者: '{}'",
+            "intent_classifier": "意图分类器耗时 {:.1f}秒",
+            "using_kb": "使用知识库",
+            "kb_id": "知识库 ID: ",
+            "query": "查询: ",
+            "invoking_tool": "调用工具 - ",
+            "unknown_function": "未知函数",
+            "function": "函数: ",
+            "type": "类型: ",
+            "parameters": "参数",
+            "param_name": "参数名称",
+            "param_value": "参数值",
+            "code_interpreter": "代码解释器工具使用",
+            "kb_response": "知识库响应",
+            "references": "引用",
+            "tool_response": "工具响应",
+            "code_output": "代码解释器输出",
+            "code_error": "代码解释错误: ",
+            "files_generated": "生成的文件:\n",
+            "agent_response": "Agent 响应",
+            "step": "步骤",
+            "sub_agent": "子 Agent",
+            "processing": "处理中...",
+            "total_input_tokens": "总输入令牌数: ",
+            "total_output_tokens": "总输出令牌数: ",
+            "total_llm_calls": "总LLM调用次数: "
+        },
+        "English": {
+            "choosing_collaborator": "Choosing a collaborator for this request...",
+            "no_matching": "No matching collaborator. Revert to 'SUPERVISOR' mode for this request.",
+            "continue_conversation": "Continue conversation with previous collaborator",
+            "use_collaborator": "Use collaborator: '{}'",
+            "intent_classifier": "Intent classifier took {:.1f}s",
+            "using_kb": "Using knowledge base",
+            "kb_id": "Knowledge base ID: ",
+            "query": "Query: ",
+            "invoking_tool": "Invoking Tool - ",
+            "unknown_function": "Unknown function",
+            "function": "Function: ",
+            "type": "Type: ",
+            "parameters": "Parameters",
+            "param_name": "Parameter Name",
+            "param_value": "Parameter Value",
+            "code_interpreter": "Code interpreter tool usage",
+            "kb_response": "Knowledge Base Response",
+            "references": "references",
+            "tool_response": "Tool Response",
+            "code_output": "Code interpreter output",
+            "code_error": "Code interpretation error: ",
+            "files_generated": "Code interpretation files generated:\n",
+            "agent_response": "Agent Response",
+            "step": "Step",
+            "sub_agent": "Sub-Agent",
+            "processing": "Processing.....",
+            "total_input_tokens": "Total Input Tokens: ",
+            "total_output_tokens": "Total Output Tokens: ",
+            "total_llm_calls": "Total LLM Calls: "
+        }
+    }
+    
+    language = st.session_state.get('language', "中文")
+    return texts[language][key]
+
 def process_routing_trace(event, step, _sub_agent_name, _time_before_routing=None):
     """Process routing classifier trace events."""
    
@@ -38,7 +108,7 @@ def process_routing_trace(event, step, _sub_agent_name, _time_before_routing=Non
     if 'modelInvocationInput' in _route:
         #print("Processing modelInvocationInput")
         container = st.container(border=True)                            
-        container.markdown(f"""**Choosing a collaborator for this request...**""")
+        container.markdown(f"""**{get_trace_text("choosing_collaborator")}**""")
         return datetime.datetime.now(), step, _sub_agent_name, None, None
         
     if 'modelInvocationOutput' in _route and _time_before_routing:
@@ -59,16 +129,16 @@ def process_routing_trace(event, step, _sub_agent_name, _time_before_routing=Non
         _classification = _raw_resp['content'][0]['text'].replace('<a>', '').replace('</a>', '')
 
         if _classification == "undecidable":
-            text = f"No matching collaborator. Revert to 'SUPERVISOR' mode for this request."
+            text = get_trace_text("no_matching")
         elif _classification in (_sub_agent_name, 'keep_previous_agent'):
             step = math.floor(step + 1)
-            text = f"Continue conversation with previous collaborator"
+            text = get_trace_text("continue_conversation")
         else:
             _sub_agent_name = _classification
             step = math.floor(step + 1)
-            text = f"Use collaborator: '{_sub_agent_name}'"
+            text = get_trace_text("use_collaborator").format(_sub_agent_name)
 
-        time_text = f"Intent classifier took {_route_duration.total_seconds():,.1f}s"
+        time_text = get_trace_text("intent_classifier").format(_route_duration.total_seconds())
         container = st.container(border=True)                            
         container.write(text)
         container.write(time_text)
@@ -85,30 +155,30 @@ def process_orchestration_trace(event, agentClient, step):
         _input = _orch['invocationInput']
         
         if 'knowledgeBaseLookupInput' in _input:
-            with st.expander("Using knowledge base", False, icon=":material/plumbing:"):
-                st.write("knowledge base id: " + _input["knowledgeBaseLookupInput"]["knowledgeBaseId"])
-                st.write("query: " + _input["knowledgeBaseLookupInput"]["text"].replace('$', r'\$'))
+            with st.expander(get_trace_text("using_kb"), False, icon=":material/plumbing:"):
+                st.write(get_trace_text("kb_id") + _input["knowledgeBaseLookupInput"]["knowledgeBaseId"])
+                st.write(get_trace_text("query") + _input["knowledgeBaseLookupInput"]["text"].replace('$', r'\$'))
                 
         if "actionGroupInvocationInput" in _input:
             try:
-                function = _input["actionGroupInvocationInput"].get("function", "未知函数")
-                with st.expander(f"Invoking Tool - {function}", False, icon=":material/plumbing:"):
-                    st.write("function : " + function)
+                function = _input["actionGroupInvocationInput"].get("function", get_trace_text("unknown_function"))
+                with st.expander(f"{get_trace_text('invoking_tool')}{function}", False, icon=":material/plumbing:"):
+                    st.write(get_trace_text("function") + function)
                     if "executionType" in _input["actionGroupInvocationInput"]:
-                        st.write("type: " + _input["actionGroupInvocationInput"]["executionType"])
+                        st.write(get_trace_text("type") + _input["actionGroupInvocationInput"]["executionType"])
                     if 'parameters' in _input["actionGroupInvocationInput"]:
-                        st.write("*Parameters*")
+                        st.write(f"*{get_trace_text('parameters')}*")
                         params = _input["actionGroupInvocationInput"]["parameters"]
                         st.table({
-                            'Parameter Name': [p["name"] for p in params],
-                            'Parameter Value': [p["value"] for p in params]
+                            get_trace_text('param_name'): [p["name"] for p in params],
+                            get_trace_text('param_value'): [p["value"] for p in params]
                         })
             except Exception as e:
                 print(f"Error processing actionGroupInvocationInput: {e}")
                 print(f"actionGroupInvocationInput content: {_input['actionGroupInvocationInput']}")
 
         if 'codeInterpreterInvocationInput' in _input:
-            with st.expander("Code interpreter tool usage", False, icon=":material/psychology:"):
+            with st.expander(get_trace_text("code_interpreter"), False, icon=":material/psychology:"):
                 gen_code = _input['codeInterpreterInvocationInput']['code']
                 st.code(gen_code, language="python")
                     
@@ -133,10 +203,10 @@ def process_orchestration_trace(event, agentClient, step):
             
             if len(chain) <= 1:
                 step = math.floor(step + 1)
-                container.markdown(f"""#### Step  :blue[{round(step,2)}]""")
+                container.markdown(f"""#### {get_trace_text("step")}  :blue[{round(step,2)}]""")
             else:
                 step = step + 0.1
-                container.markdown(f"""###### Step {round(step,2)} Sub-Agent  :red[{agentName}]""")
+                container.markdown(f"""###### {get_trace_text("step")} {round(step,2)} {get_trace_text("sub_agent")}  :red[{agentName}]""")
             
             container.write(_orch["rationale"]["text"].replace('$', r'\$'))
 
@@ -144,36 +214,52 @@ def process_orchestration_trace(event, agentClient, step):
         _obs = _orch['observation']
         
         if 'knowledgeBaseLookupOutput' in _obs:
-            with st.expander("Knowledge Base Response", False, icon=":material/psychology:"):
+            with st.expander(get_trace_text("kb_response"), False, icon=":material/psychology:"):
                 _refs = _obs['knowledgeBaseLookupOutput']['retrievedReferences']
                 _ref_count = len(_refs)
-                st.write(f"{_ref_count} references")
+                st.write(f"{_ref_count} {get_trace_text('references')}")
                 for i, _ref in enumerate(_refs, 1):
                     st.write(f"  ({i}) {_ref['content']['text'][0:200]}...")
 
         if 'actionGroupInvocationOutput' in _obs:
-            with st.expander("Tool Response", False, icon=":material/psychology:"):
+            with st.expander(get_trace_text("tool_response"), False, icon=":material/psychology:"):
                 st.write(_obs['actionGroupInvocationOutput']['text'].replace('$', r'\$'))
 
         if 'codeInterpreterInvocationOutput' in _obs:
-            with st.expander("Code interpreter tool usage", False, icon=":material/psychology:"):
+            with st.expander(get_trace_text("code_interpreter"), False, icon=":material/psychology:"):
                 if 'executionOutput' in _obs['codeInterpreterInvocationOutput']:
                     raw_output = _obs['codeInterpreterInvocationOutput']['executionOutput']
                     st.code(raw_output)
 
                 if 'executionError' in _obs['codeInterpreterInvocationOutput']:
                     error_text = _obs['codeInterpreterInvocationOutput']['executionError']
-                    st.write(f"Code interpretation error: {error_text}")
+                    st.write(f"{get_trace_text('code_error')}{error_text}")
 
                 if 'files' in _obs['codeInterpreterInvocationOutput']:
                     files_generated = _obs['codeInterpreterInvocationOutput']['files']
-                    st.write(f"Code interpretation files generated:\n{files_generated}")
+                    st.write(f"{get_trace_text('files_generated')}{files_generated}")
 
         if 'finalResponse' in _obs:
-            with st.expander("Agent Response", False, icon=":material/psychology:"):
+            with st.expander(get_trace_text("agent_response"), False, icon=":material/psychology:"):
                 st.write(_obs['finalResponse']['text'].replace('$', r'\$'))
             
     return step, inputTokens, outputTokens
+
+def get_error_text(key):
+    """根据当前语言获取错误文本"""
+    texts = {
+        "中文": {
+            "missing_config": "缺少必要的Agent配置信息。请在侧边栏配置Agent ID和Agent Alias ID。",
+            "config_error": "配置错误：缺少必要的Agent配置信息。"
+        },
+        "English": {
+            "missing_config": "Missing required Agent configuration. Please configure Agent ID and Agent Alias ID in the sidebar.",
+            "config_error": "Configuration Error: Missing required Agent information."
+        }
+    }
+    
+    language = st.session_state.get('language', "中文")
+    return texts[language][key]
 
 def invoke_agent(input_text, session_id, task_yaml_content):
     """Main agent invocation and response processing."""
@@ -188,6 +274,11 @@ def invoke_agent(input_text, session_id, task_yaml_content):
     else:
         client = boto3.client('bedrock-agent-runtime')
         agentClient = boto3.client('bedrock-agent')
+        
+    # 检查是否有必要的配置信息
+    if 'agent_id' not in _bot_config or 'agent_alias_id' not in _bot_config:
+        st.error(get_error_text("missing_config"))
+        return get_error_text("config_error")
     
     # Process tasks if any
     _tasks = []
@@ -239,7 +330,7 @@ def invoke_agent(input_text, session_id, task_yaml_content):
     outputTokens = 0
     _total_llm_calls = 0
     
-    with st.spinner("Processing ....."):
+    with st.spinner(get_trace_text("processing")):
         for event in response.get("completion"):
             if "chunk" in event:
                 yield event["chunk"]["bytes"].decode("utf-8").replace('$', r'\$')
@@ -276,6 +367,6 @@ def invoke_agent(input_text, session_id, task_yaml_content):
 
         # Display token usage at the end
         container = st.container(border=True)
-        container.markdown("Total Input Tokens : **" + str(inputTokens) + "**")
-        container.markdown("Total Output Tokens : **" + str(outputTokens) + "**")
-        container.markdown("Total LLM Calls : **" + str(_total_llm_calls) + "**")
+        container.markdown(f"{get_trace_text('total_input_tokens')}**{str(inputTokens)}**")
+        container.markdown(f"{get_trace_text('total_output_tokens')}**{str(outputTokens)}**")
+        container.markdown(f"{get_trace_text('total_llm_calls')}**{str(_total_llm_calls)}**")
