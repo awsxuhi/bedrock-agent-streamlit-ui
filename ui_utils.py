@@ -62,7 +62,11 @@ def get_trace_text(key):
             "processing": "处理中...",
             "total_input_tokens": "总输入令牌数: ",
             "total_output_tokens": "总输出令牌数: ",
-            "total_llm_calls": "总LLM调用次数: "
+            "total_llm_calls": "总LLM调用次数: ",
+            "collaborator_invoke": "调用协作者 - {}",
+            "collaborator_name": "协作者名称: ",
+            "collaborator_input": "输入内容: ",
+            "collaborator_response": "协作者响应 - {}"
         },
         "English": {
             "choosing_collaborator": "Choosing a collaborator for this request...",
@@ -93,11 +97,15 @@ def get_trace_text(key):
             "processing": "Processing.....",
             "total_input_tokens": "Total Input Tokens: ",
             "total_output_tokens": "Total Output Tokens: ",
-            "total_llm_calls": "Total LLM Calls: "
+            "total_llm_calls": "Total LLM Calls: ",
+            "collaborator_invoke": "Invoking Collaborator - {}",
+            "collaborator_name": "Collaborator Name: ",
+            "collaborator_input": "Input Content: ",
+            "collaborator_response": "Collaborator Response - {}"
         }
     }
     
-    language = st.session_state.get('language', "中文")
+    language = st.session_state.get('language', "English")
     return texts[language][key]
 
 def process_routing_trace(event, step, _sub_agent_name, _time_before_routing=None):
@@ -150,6 +158,7 @@ def process_orchestration_trace(event, agentClient, step):
     _orch = event['trace']['trace']['orchestrationTrace']
     inputTokens = 0
     outputTokens = 0
+    collaborator_output = None
     
     if "invocationInput" in _orch:
         _input = _orch['invocationInput']
@@ -158,6 +167,14 @@ def process_orchestration_trace(event, agentClient, step):
             with st.expander(get_trace_text("using_kb"), False, icon=":material/plumbing:"):
                 st.write(get_trace_text("kb_id") + _input["knowledgeBaseLookupInput"]["knowledgeBaseId"])
                 st.write(get_trace_text("query") + _input["knowledgeBaseLookupInput"]["text"].replace('$', r'\$'))
+        
+        if 'agentCollaboratorInvocationInput' in _input:
+            # 处理collaborator agent的调用
+            collab_name = _input['agentCollaboratorInvocationInput']['agentCollaboratorName']
+            collab_input = _input['agentCollaboratorInvocationInput']['input']['text']
+            with st.expander(get_trace_text("collaborator_invoke").format(collab_name), False, icon=":material/account-group:"):
+                st.write(f"{get_trace_text('collaborator_name')}{collab_name}")
+                st.write(f"{get_trace_text('collaborator_input')}{collab_input[:200]}...")
                 
         if "actionGroupInvocationInput" in _input:
             try:
@@ -220,6 +237,17 @@ def process_orchestration_trace(event, agentClient, step):
                 st.write(f"{_ref_count} {get_trace_text('references')}")
                 for i, _ref in enumerate(_refs, 1):
                     st.write(f"  ({i}) {_ref['content']['text'][0:200]}...")
+        
+        if 'agentCollaboratorInvocationOutput' in _obs:
+            # 处理collaborator agent的响应
+            collab_name = _obs['agentCollaboratorInvocationOutput']['agentCollaboratorName']
+            collab_output = _obs['agentCollaboratorInvocationOutput']['output']['text']
+            with st.expander(get_trace_text("collaborator_response").format(collab_name), False, icon=":material/account-group:"):
+                st.write(f"{get_trace_text('collaborator_name')}{collab_name}")
+                st.markdown(collab_output.replace('$', r'\$'))
+            
+            # 保存collaborator的输出，以便在主UI中显示
+            collaborator_output = collab_output
 
         if 'actionGroupInvocationOutput' in _obs:
             with st.expander(get_trace_text("tool_response"), False, icon=":material/psychology:"):
@@ -243,7 +271,7 @@ def process_orchestration_trace(event, agentClient, step):
             with st.expander(get_trace_text("agent_response"), False, icon=":material/psychology:"):
                 st.write(_obs['finalResponse']['text'].replace('$', r'\$'))
             
-    return step, inputTokens, outputTokens
+    return step, inputTokens, outputTokens, collaborator_output
 
 def get_error_text(key):
     """根据当前语言获取错误文本"""
@@ -260,7 +288,7 @@ def get_error_text(key):
         }
     }
     
-    language = st.session_state.get('language', "中文")
+    language = st.session_state.get('language', "English")
     return texts[language][key]
 
 def invoke_agent(input_text, session_id, task_yaml_content):
@@ -331,11 +359,16 @@ def invoke_agent(input_text, session_id, task_yaml_content):
     inputTokens = 0
     outputTokens = 0
     _total_llm_calls = 0
+    collaborator_response = None
+    has_collaborator_output = False
     
     with st.spinner(get_trace_text("processing")):
         for event in response.get("completion"):
             if "chunk" in event:
-                yield event["chunk"]["bytes"].decode("utf-8").replace('$', r'\$')
+                chunk_text = event["chunk"]["bytes"].decode("utf-8").replace('$', r'\$')
+                # 如果不是空字符串，并且没有collaborator输出，则输出chunk
+                if chunk_text.strip() and not has_collaborator_output:
+                    yield chunk_text
                 
             if "trace" in event:
                 if 'routingClassifierTrace' in event['trace']['trace']:
@@ -361,11 +394,20 @@ def invoke_agent(input_text, session_id, task_yaml_content):
                 if "orchestrationTrace" in event["trace"]["trace"]:
                     result = process_orchestration_trace(event, agentClient, step)
                     if result:
-                        step, in_tokens, out_tokens = result
+                        step, in_tokens, out_tokens, collab_output = result
                         if in_tokens is not None or out_tokens is not None:
                             inputTokens += (in_tokens or 0)
                             outputTokens += (out_tokens or 0)
                             _total_llm_calls += 1
+                        
+                        # 如果有collaborator输出，保存它
+                        if collab_output:
+                            collaborator_response = collab_output
+                            has_collaborator_output = True
+
+        # 如果有collaborator输出，直接返回它而不是supervisor的输出
+        if has_collaborator_output and collaborator_response:
+            yield "\n\n" + collaborator_response
 
         # Display token usage at the end
         container = st.container(border=True)

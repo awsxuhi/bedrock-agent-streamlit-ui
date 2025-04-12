@@ -462,7 +462,7 @@ def get_ui_text(key):
 
 def on_language_change():
     """语言切换回调函数"""
-    if st.session_state['language_toggle'] == get_ui_text("chinese"):
+    if st.session_state['language_toggle']:
         st.session_state['language'] = "中文"
     else:
         st.session_state['language'] = "English"
